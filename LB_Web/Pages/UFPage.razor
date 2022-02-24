@@ -1,0 +1,209 @@
+﻿@page "/UF"
+@using Dominio
+@inject HttpClient Http
+
+<h3 class="alert-light">Unidades da Federação</h3>
+
+<div>
+    <div style="float:left">
+        <button class="btn btn-primary" @onclick="InsertUF">Nova UF</button>
+    </div>
+    <div style="float:right;width:40%;">
+        <div class="col-sm-6" style="float:left">
+            <input class="form-control"
+                   type="text"
+                   placeholder="Buscar"
+                   @bind="dsUF" />
+        </div>
+        <div>
+            <button type="submit"
+                    class="btn btn-default btn-info"
+                    @onclick="(async()=>await GetUFAsync())">
+                Buscar
+            </button>
+        </div>
+    </div>
+</div>
+
+@if(Estados == null)
+{
+    <p>
+        <em>
+            Carregando...
+        </em>
+    </p>
+}
+else
+{
+    <table class="table table-sm table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>Código</th>
+                <th>Estado</th>
+                <th>Sigla</th>
+                <th />
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Estados)
+            {
+                <tr>
+                    <td>@c.Cd_uf</td>
+                    <td>@c.Ds_uf</td>
+                    <td>@c.Sigla</td>
+                    <td>
+                        <button class="btn btn-info btn-sm"
+                                @onclick="(()=>UpdateUF(c))">
+                            Alterar
+                        </button>
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="(()=>DeleteUF(c))">
+                            Excluir
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    if (isAdd)
+    {
+        <div class="modal"
+             tabindex="-1"
+             style="display:block"
+             role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">@modalTitle</h3>
+                        <button type="button"
+                                class="close"
+                                @onclick="closeModal">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="@uf"
+                                  OnValidSubmit="@(async()=> await SalvarUFAsync())">
+                            <DataAnnotationsValidator />
+                            <div class="form-group">
+                                <label for="Cd_uf"></label>
+                            </div>
+                            
+                            <button class="btn btn-block btn-info" type="submit" data-dismiss="modal">Salvar</button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    if (isDelete)
+    {
+        <div class="modal"
+             tabindex="-1"
+             style="display:block"
+             role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">Excluir Unidade</h3>
+                    </div>
+                    <div class="modal-body">
+                        <h5>Confirma exclusão?</h5>
+                        <table class="table">
+                            <tr>
+                                <td><b>Código</b></td>
+                                <td>@uf.Cd_uf</td>
+                            </tr>
+                            <tr>
+                                <td><b>Estado</b></td>
+                                <td>@uf.Ds_uf</td>
+                            </tr>
+                            <tr>
+                                <td><b>Sigla</b></td>
+                                <td>@uf.Sigla</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger"
+                                @onclick="(async()=>
+                                           await ExcluirCidadeAsync())"
+                                data-dismiss="modal">
+                            Sim
+                        </button>
+                        <button class="btn btn-warning"
+                                @onclick="closeModal">
+                            Não
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool isAdd = false;
+    private bool isDelete = false;
+    private string modalTitle = string.Empty;
+    private string dsUF = string.Empty;
+    private UF? uf;
+    private IEnumerable<UF>? Estados;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAsync?ds_uf=ACRE");
+        Estados = result;
+    }
+    private void InsertUF()
+    {
+        uf = new UF();
+        modalTitle = "Inserir UF";
+        isAdd = true;
+    }
+    private void UpdateUF(UF _uf)
+    {
+        uf = _uf;
+        modalTitle = "Alterar UF";
+        isAdd = true;
+    }
+    private void DeleteUF(UF _uf)
+    {
+        uf = _uf;
+        isDelete = true;
+    }
+    private async Task GetUFAsync()
+    {
+        Estados = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAsync?ds_uf=" + dsUF);
+    }
+    private async Task SalvarUFAsync()
+    {
+        if (uf != null)
+        {
+            var response = await Http.PostAsJsonAsync<UF>("/UF/GravarAsync", uf);
+            if (response.IsSuccessStatusCode)
+            {
+                isAdd = false;
+                Estados = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAsync?ds_uf=" + dsUF);
+            }
+        }
+    }
+
+    private async Task ExcluirCidadeAsync()
+    {
+        if(uf != null)
+        {
+            var response = await Http.DeleteAsync("/UF/DeleteAsync?cd_uf=" + uf.Cd_uf);
+            if(response.IsSuccessStatusCode)
+            {
+                isDelete = false;
+                Estados = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAsync?ds_uf=" + dsUF);
+            }
+        }
+    }
+    private void closeModal()
+    {
+        isAdd = false;
+        isDelete = false;
+    }
+}
