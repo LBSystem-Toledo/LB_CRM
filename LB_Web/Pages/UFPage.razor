@@ -152,7 +152,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAsync?ds_uf=ACRE");
+        var result = await Http.GetFromJsonAsync<IEnumerable<UF>>("/UF/GetAllAsync");
         Estados = result;
     }
     private void InsertUF()

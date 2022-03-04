@@ -1,0 +1,197 @@
+﻿@page "/Segmento"
+@using Dominio
+@inject HttpClient Http
+
+<h3 class="alert-light">Segmentos de Clientes</h3>
+
+<div>
+    <div style="float:left">
+        <button class="btn btn-primary" @onclick="Insert">Novo Segmento</button>
+    </div>
+    <div style="float:right;width:40%">
+        <div class="col-sm-6" style="float:left">
+            <input class="form-control"
+                   type="text"
+                   placeholder="Buscar"
+                   @bind="dsSegmento"/>
+        </div>
+        <div>
+            <button type="submit"
+                    class="btn btn-default btn-info"
+                    @onclick="(async()=> await GetSegmentosAsync())">
+                Buscar
+            </button>
+        </div>
+    </div>
+</div>
+
+@if(Segmentos == null)
+{
+    <p>
+        <em>
+            Carregando...
+        </em>
+    </p>
+}
+else
+{
+    <table class="table table-sm table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var s in Segmentos)
+            {
+                <tr>
+                    <td>@s.Id_segmento</td>
+                    <td>@s.Ds_segmento</td>
+                    <td>
+                        <button class="btn btn-info btn-sm"
+                                @onclick="(()=> update(s))">
+                            Alterar
+                        </button>
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="(()=> Delete(s))">
+                            Excluir
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    if(isAdd)
+    {
+        <div class="modal"
+             tabindex="-1"
+             style="display:block"
+             role="dialog">
+             <div class="modal-dialog">
+                 <div class="modal-content">
+                     <div class="modal-header">
+                         <h3 class="modal-title">@modalTitle</h3>
+                         <button type="button"
+                                 class="btn-close"
+                                 @onclick="closeModal">
+                                 <span aria-hidden="true">X</span>
+                         </button>
+                     </div>
+                     <div class="modal-body">
+                         <EditForm Model="@_segmento"
+                                   OnValidSubmit="@(async()=> await SalvarAsync())">
+                            <DataAnnotationsValidator/>
+                            <div class="form-group">
+                                <label for="Ds_segmento">Descrição</label>
+                                <input form="Ds_segmento" 
+                                    class="form-control"
+                                    @bind="_segmento.Ds_segmento"/>
+                                <ValidationMessage For="@(()=> _segmento.Ds_segmento)"/>
+                            </div>
+                            <button class="btn btn-block btn-info" type="submit" data-dismiss="modal">Salvar</button>
+                        </EditForm>
+                     </div>
+                 </div>
+             </div>
+        </div>
+    }
+    if(isDelete)
+    {
+        <div class="modal"
+             tabindex="-1"
+             style="display:block"
+             role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">@modalTitle</h3>
+                    </div>
+                    <div class="modal-body">
+                        <h5>Confirma exclusão?</h5>
+                        <table class="table">
+                            <tr>
+                                <td><b>Descrição</b></td>
+                                <td>@_segmento.Ds_segmento</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger"
+                                @onclick="(async()=>
+                                           await ExcluirAsync())"
+                                data-dismiss="modal">Sim</button>
+                        <button class="btn btn-warning"
+                                @onclick="closeModal">Não</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool isAdd = false;
+    private bool isDelete = false;
+    private string modalTitle = string.Empty;
+    private string dsSegmento = string.Empty;
+    private Segmento? _segmento;
+    private IEnumerable<Segmento>? Segmentos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Segmentos = await Http.GetFromJsonAsync<IEnumerable<Segmento>>("/Segmento/GetAllAsync");
+    }
+    private void Insert()
+    {
+        _segmento = new Segmento();
+        modalTitle = "Novo Segmento";
+        isAdd = true;
+    }
+    private void update(Segmento segmento)
+    {
+        _segmento = segmento;
+        modalTitle = "Alterar Segmento";
+        isAdd = true;
+    }
+    private void Delete(Segmento segmento)
+    {
+        _segmento = segmento;
+        isDelete = true;
+    }
+    private async Task GetSegmentosAsync()
+    {
+        if(!string.IsNullOrWhiteSpace(dsSegmento))
+            Segmentos = await Http.GetFromJsonAsync<IEnumerable<Segmento>>("/Segmento/GetAsync?Ds_segmento=" + dsSegmento);
+        else Segmentos = await Http.GetFromJsonAsync<IEnumerable<Segmento>>("/Segmento/GetAllAsync");
+    }
+    private async Task SalvarAsync()
+    {
+        if (_segmento != null)
+        {
+            var response = await Http.PostAsJsonAsync<Segmento>("/Segmento/GravarAsync", _segmento);
+            if (response.IsSuccessStatusCode)
+            {
+                isAdd = false;
+                await GetSegmentosAsync();
+            }
+        }
+    }
+    private async Task ExcluirAsync()
+    {
+        if(_segmento != null)
+        {
+            var response = await Http.DeleteAsync("/Segmento/DeleteAsync?Id_segmento=" + _segmento.Id_segmento);
+            if(response.IsSuccessStatusCode)
+            {
+                isDelete = false;
+                await GetSegmentosAsync();
+            }
+        }
+    }
+    private void closeModal()
+    {
+        isAdd = false;
+        isDelete = false;
+    }
+}
